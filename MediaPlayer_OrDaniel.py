@@ -250,15 +250,20 @@ class Player(Tk.Frame):
         self.markedSeconds = []
 
         # label
-        self.moveToLabel = Tk.Label(self.buttons_panel, text = "Marked seconds :")
+        self.count = Tk.StringVar()
+        self.count.set("Count: 0")
+        self.countingLabel = Tk.Label(self.buttons_panel, textvariable=self.count ,font="20")
+        self.countingLabel.pack(side=Tk.LEFT)
+        self.moveToLabel = Tk.Label(self.buttons_panel, text = "Marked seconds:")
         self.moveToLabel.pack()
         # Combobox creation
         self.moveTo = Tk.IntVar()
         self.movechoosen = ttk.Combobox(self.buttons_panel, width = 27, textvariable = self.moveTo)
-        
+        self.secondCount = {}
         # Adding combobox drop down list
+        
         self.movechoosen['values'] = tuple(self.markedSeconds)
-        self.movechoosen.bind("<<ComboboxSelected>>", lambda _: self.timeSlider.set(self.movechoosen.get()))
+        self.movechoosen.bind("<<ComboboxSelected>>", lambda _: self.OnComboBoxChosen())
         self.movechoosen.pack()
         
         
@@ -295,7 +300,10 @@ class Player(Tk.Frame):
 
         self.OnTick()  # set the timer up
         
-                
+    def OnComboBoxChosen(self):
+        self.timeSlider.set(self.movechoosen.get())
+        self.count.set("Count: "+str(self.secondCount[int(self.movechoosen.get())]))
+        
     def OnClose(self, *unused):
         """Closes the window and quit.
         """
@@ -371,12 +379,20 @@ class Player(Tk.Frame):
                                              ("mov files", "*.mov")))
         csvfile = askopenfilename(title = "Select file",filetypes = (("CSV Files","*.csv"),))
         
-        df = pd.read_csv (csvfile)
-        for sec in df:
-            self.movechoosen['values'] = (*self.movechoosen['values'], sec)
-
+        df = pd.read_csv (csvfile,index_col=0)
+        print(df.head())
+        seconds=df.loc["sec"]
+        count=df.loc["count"]
+        for sec in seconds:
+            self.movechoosen['values'] = (*self.movechoosen['values'], seconds.at[str(sec)])
+            self.secondCount[sec] = count.at[str(sec)]
+            self.secondCount[sec+1] = count.at[str(sec)]
+        print("this is count")
+        print(self.secondCount)
+        
+        
         self._Play(video)
-
+        
     def _Pause_Play(self, playing):
         # re-label menu item and button, adjust callbacks
         p = 'Pause' if playing else 'Play'
@@ -390,6 +406,7 @@ class Player(Tk.Frame):
         # helper for OnOpen and OnPlay
         if isfile(video):  # Creation
             m = self.Instance.media_new(str(video))  # Path, unicode
+            
             self.player.set_media(m)
             self.parent.title("tkVLCplayer - %s" % (basename(video),))
 
@@ -409,6 +426,7 @@ class Player(Tk.Frame):
                     self.player.set_xwindow(h)  # plays audio, no video
             else:
                 self.player.set_xwindow(h)  # fails on Windows
+            
             # FIXME: this should be made cross-platform
             self.OnPlay()
 
@@ -440,7 +458,7 @@ class Player(Tk.Frame):
             if vol > 0:
                 self.volVar.set(vol)
                 self.volSlider.set(vol)
-
+        
     def OnResize(self, *unused):
         """Adjust the window/frame to the video aspect ratio.
         """
@@ -475,7 +493,7 @@ class Player(Tk.Frame):
             # reset the time slider
             self.timeSlider.set(0)
             self.text.set("00:00")
-            
+            self.count.set("Count: 0")
             self._stopped = True
         # XXX on macOS libVLC prints these error messages:
         # [h264 @ 0x7f84fb061200] get_buffer() failed
@@ -502,6 +520,12 @@ class Player(Tk.Frame):
                     min_timeSlider=int((t-sec_timeSlider)/60)
                     sec_timeSlider=int(sec_timeSlider)
                     self.text.set(f"{min_timeSlider:02d}"+":"+f"{sec_timeSlider:02d}")
+                    
+                    #update counting
+                    if int(t) in self.secondCount:
+                        self.count.set("Count: "+str(self.secondCount[int(t)]))
+                    else:
+                        self.count.set("Count: 0")
                     
         # start the 1 second timer again
         self.parent.after(1000, self.OnTick)
@@ -552,7 +576,7 @@ class Player(Tk.Frame):
             # e.g. if the player is stopped or doesn't have media
             if self.player.audio_set_volume(vol):  # and self.player.get_media():
                 self.showError("Failed to set the volume: %s." % (v_M,))
-
+        
     def showError(self, message):
         """Display a simple error dialog.
         """
