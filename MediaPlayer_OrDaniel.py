@@ -30,6 +30,10 @@ __version__ = '20.05.04'  # mrJean1 at Gmail
 # import external libraries
 import vlc
 import pandas as pd
+import numpy as np
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, 
+NavigationToolbar2Tk)
 # import standard libraries
 import sys
 if sys.version_info[0] < 3:
@@ -206,10 +210,11 @@ class Player(Tk.Frame):
         self.videopanel.pack(fill=Tk.BOTH, expand=1)
 
         # panel to hold buttons
-        self.buttons_panel = Tk.Toplevel(self.parent)
+        self.buttons_panel = Tk.Toplevel(self.videopanel)
         self.buttons_panel.title("")
         self.is_buttons_panel_anchor_active = True
 
+        
         buttons = ttk.Frame(self.buttons_panel)
         self.playButton = ttk.Button(buttons, text="Play", command=self.OnPlay)
         stop            = ttk.Button(buttons, text="Stop", command=self.OnStop)
@@ -218,6 +223,8 @@ class Player(Tk.Frame):
         stop.pack(side=Tk.LEFT)
         self.muteButton.pack(side=Tk.LEFT)
 
+
+        
         self.volMuted = False
         self.volVar = Tk.IntVar()
         self.volVar.set(100)
@@ -228,6 +235,13 @@ class Player(Tk.Frame):
         
         buttons.pack(side=Tk.BOTTOM, fill=Tk.X)
 
+        cnv = ttk.Frame(self.buttons_panel)
+        self.canv = Tk.Canvas(cnv, height=20, bg='grey')
+        self.canv.pack(side=Tk.BOTTOM, fill=Tk.X, expand=1)
+        cnv.pack(side=Tk.BOTTOM, fill=Tk.X)
+        
+              
+                              
 
         # panel to hold player time slider
         timers = ttk.Frame(self.buttons_panel)
@@ -239,6 +253,8 @@ class Player(Tk.Frame):
         self.timeSlider.pack(side=Tk.BOTTOM, fill=Tk.X, expand=1)
         self.timeSliderUpdate = time.time()
         timers.pack(side=Tk.BOTTOM, fill=Tk.X)
+        
+        
         
         #timer labeling min:sec
         self.first_time=time.time()
@@ -293,12 +309,15 @@ class Player(Tk.Frame):
             self.buttons_panel.bind("<B1-Motion>", self._DetectButtonsPanelDragging)
             self.buttons_panel.bind("<ButtonRelease-1>", lambda _: setattr(self, "has_clicked_on_buttons_panel", False))
             self.has_clicked_on_buttons_panel = False
+            self.buttons_panel.bind()
         else:
             self.is_buttons_panel_anchor_active = True
 
         self._AnchorButtonsPanel()
 
         self.OnTick()  # set the timer up
+        
+    
         
     def OnComboBoxChosen(self):
         self.timeSlider.set(self.movechoosen.get())
@@ -307,6 +326,8 @@ class Player(Tk.Frame):
     def OnClose(self, *unused):
         """Closes the window and quit.
         """
+        #stop the mediaPlayer before closing
+        self.OnStop()
         # print("_quit: bye")
         self.parent.quit()  # stops mainloop
         self.parent.destroy()  # this is necessary on Windows to avoid
@@ -377,8 +398,12 @@ class Player(Tk.Frame):
                                 filetypes = (("all files", "*.*"),
                                              ("mp4 files", "*.mp4"),
                                              ("mov files", "*.mov")))
+        if not video: return
+        
         csvfile = askopenfilename(title = "Select file",filetypes = (("CSV Files","*.csv"),))
         
+        
+        if not csvfile: return
         df = pd.read_csv (csvfile,index_col=0)
         print(df.head())
         seconds=df.loc["sec"]
@@ -390,8 +415,42 @@ class Player(Tk.Frame):
         print("this is count")
         print(self.secondCount)
         
-        
         self._Play(video)
+        time.sleep(0.2)
+        video_len=self.player.get_length() * 1e-3
+        size_of_second=470
+        start_point=15
+        self.canv.delete("all")
+        self.canv.update_idletasks()
+        for marked_sec in self.movechoosen['values']:
+            print(marked_sec)
+            print(self.secondCount[int(marked_sec)])
+            marked = int(self.secondCount[int(marked_sec)])
+            if marked<5:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="navajo white", fill="navajo white")
+            elif marked>=5 and marked<10:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="LightGoldenrod1", fill="LightGoldenrod1")
+            elif marked>=10 and marked<15:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="LightGoldenrod3", fill="LightGoldenrod3")
+            elif marked>=15 and marked<20:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="tan2", fill="tan2")
+            elif marked>=20 and marked<25:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="orange2", fill="orange2")
+            elif marked>=25 and marked<30:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="orange3", fill="orange3")
+            elif marked>=30 and marked<35:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="tomato2", fill="tomato2")
+            elif marked>=35 and marked<40:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="tomato3", fill="tomato3")
+            elif marked>=40 and marked<45:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="OrangeRed2", fill="OrangeRed2")
+            elif marked>=45 and marked<50:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="red3", fill="red3")
+            elif marked>=50:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="red4", fill="red4")
+            
+        self.canv.update_idletasks()
+        root.after(0, self.update)
         
     def _Pause_Play(self, playing):
         # re-label menu item and button, adjust callbacks
