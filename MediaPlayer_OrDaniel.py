@@ -189,7 +189,7 @@ class Player(Tk.Frame):
         fileMenu.add_shortcut("Open...", 'o', self.OnOpen)
         fileMenu.add_separator()
         fileMenu.add_shortcut("Play", 'p', self.OnPlay)  # Play/Pause
-        fileMenu.add_command(label="Stop", command=self.OnStop)
+        fileMenu.add_shortcut("Stop",'t', command=self.OnStop)
         fileMenu.add_separator()
         fileMenu.add_shortcut("Mute", 'm', self.OnMute)
         fileMenu.add_separator()
@@ -217,10 +217,10 @@ class Player(Tk.Frame):
         
         buttons = ttk.Frame(self.buttons_panel)
         self.playButton = ttk.Button(buttons, text="Play", command=self.OnPlay)
-        stop            = ttk.Button(buttons, text="Stop", command=self.OnStop)
+        self.stopButton = ttk.Button(buttons, text="Stop", command=self.OnStop)
         self.muteButton = ttk.Button(buttons, text="Mute", command=self.OnMute)
         self.playButton.pack(side=Tk.LEFT)
-        stop.pack(side=Tk.LEFT)
+        self.stopButton.pack(side=Tk.LEFT)
         self.muteButton.pack(side=Tk.LEFT)
 
 
@@ -254,6 +254,7 @@ class Player(Tk.Frame):
         self.timeSliderUpdate = time.time()
         timers.pack(side=Tk.BOTTOM, fill=Tk.X)
         
+        self.last_resize_width = 0
         
         
         #timer labeling min:sec
@@ -318,7 +319,45 @@ class Player(Tk.Frame):
         self.OnTick()  # set the timer up
         
     
-        
+    def markingLine(self):
+        #for resizing save last width
+        self.last_resize_width = self.timeSlider.winfo_width()
+
+        video_len=self.player.get_length() * 1e-3
+        size_of_second=(470/502)*(self.last_resize_width)
+        start_point=(15/502)*(self.last_resize_width)
+        self.canv.delete("all")
+        self.canv.update_idletasks()
+        for marked_sec in self.movechoosen['values']:
+        #print(marked_sec)
+        #print(self.secondCount[int(marked_sec)])
+            marked = int(self.secondCount[int(marked_sec)])
+            if marked<5:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="navajo white", fill="navajo white")
+            elif marked>=5 and marked<10:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="LightGoldenrod1", fill="LightGoldenrod1")
+            elif marked>=10 and marked<15:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="LightGoldenrod3", fill="LightGoldenrod3")
+            elif marked>=15 and marked<20:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="tan2", fill="tan2")
+            elif marked>=20 and marked<25:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="orange2", fill="orange2")
+            elif marked>=25 and marked<30:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="orange3", fill="orange3")
+            elif marked>=30 and marked<35:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="tomato2", fill="tomato2")
+            elif marked>=35 and marked<40:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="tomato3", fill="tomato3")
+            elif marked>=40 and marked<45:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="OrangeRed2", fill="OrangeRed2")
+            elif marked>=45 and marked<50:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="red3", fill="red3")
+            elif marked>=50:
+                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="red4", fill="red4")
+                
+        self.canv.update_idletasks()
+        root.after(0, self.update)
+            
     def OnComboBoxChosen(self):
         self.timeSlider.set(self.movechoosen.get())
         self.count.set("Count: "+str(self.secondCount[int(self.movechoosen.get())]))
@@ -403,54 +442,30 @@ class Player(Tk.Frame):
         csvfile = askopenfilename(title = "Select file",filetypes = (("CSV Files","*.csv"),))
         
         
-        if not csvfile: return
-        df = pd.read_csv (csvfile,index_col=0)
-        print(df.head())
-        seconds=df.loc["sec"]
-        count=df.loc["count"]
-        for sec in seconds:
-            self.movechoosen['values'] = (*self.movechoosen['values'], seconds.at[str(sec)])
-            self.secondCount[sec] = count.at[str(sec)]
-            self.secondCount[sec+1] = count.at[str(sec)]
-        print("this is count")
-        print(self.secondCount)
-        
-        self._Play(video)
-        time.sleep(0.2)
-        video_len=self.player.get_length() * 1e-3
-        size_of_second=470
-        start_point=15
-        self.canv.delete("all")
-        self.canv.update_idletasks()
-        for marked_sec in self.movechoosen['values']:
-            print(marked_sec)
-            print(self.secondCount[int(marked_sec)])
-            marked = int(self.secondCount[int(marked_sec)])
-            if marked<5:
-                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="navajo white", fill="navajo white")
-            elif marked>=5 and marked<10:
-                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="LightGoldenrod1", fill="LightGoldenrod1")
-            elif marked>=10 and marked<15:
-                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="LightGoldenrod3", fill="LightGoldenrod3")
-            elif marked>=15 and marked<20:
-                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="tan2", fill="tan2")
-            elif marked>=20 and marked<25:
-                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="orange2", fill="orange2")
-            elif marked>=25 and marked<30:
-                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="orange3", fill="orange3")
-            elif marked>=30 and marked<35:
-                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="tomato2", fill="tomato2")
-            elif marked>=35 and marked<40:
-                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="tomato3", fill="tomato3")
-            elif marked>=40 and marked<45:
-                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="OrangeRed2", fill="OrangeRed2")
-            elif marked>=45 and marked<50:
-                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="red3", fill="red3")
-            elif marked>=50:
-                self.canv.create_rectangle(start_point+((int(marked_sec)/video_len)*size_of_second), 0, start_point+((int(marked_sec)/video_len)*size_of_second)+5, 20,outline="red4", fill="red4")
+        if csvfile:
+            df = pd.read_csv (csvfile,index_col=0)
+            #print(df.head())
+            seconds=df.loc["sec"]
+            count=df.loc["count"]
+            self.secondCount.clear()
+            self.movechoosen.destroy()
+            self.movechoosen = ttk.Combobox(self.buttons_panel, width = 27, textvariable = self.moveTo)
+            self.movechoosen['values'] = tuple(self.markedSeconds)
+            self.movechoosen.bind("<<ComboboxSelected>>", lambda _: self.OnComboBoxChosen())
+            self.movechoosen.pack()
             
-        self.canv.update_idletasks()
-        root.after(0, self.update)
+            for sec in seconds:
+                self.movechoosen['values'] = (*self.movechoosen['values'], seconds.at[str(sec)])
+                self.secondCount[sec] = count.at[str(sec)]
+                #unmark if you want the counting to last for two sec
+                #self.secondCount[sec+1] = count.at[str(sec)]
+            #print("this is count")
+            #print(self.secondCount)
+            self._Play(video)
+            time.sleep(0.2)
+            self.markingLine()
+        else:
+            self._Play(video)
         
     def _Pause_Play(self, playing):
         # re-label menu item and button, adjust callbacks
@@ -540,9 +555,14 @@ class Player(Tk.Frame):
                 else:  # ... for portrait
                     # adjust the window width
                     w = round(float(h) * u / v)
+                    
                 self.parent.geometry("%sx%s+%s+%s" % (w, h, x, y))
                 self._geometry = self.parent.geometry()  # actual
-
+        #resize the marking line
+        if self.timeSlider.winfo_width()!=self.last_resize_width:
+            #print(self.timeSlider.winfo_width())
+            self.markingLine()
+        
     def OnStop(self, *unused):
         """Stop the player, resets media.
         """
