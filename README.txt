@@ -11,3 +11,7 @@ conda install -c postelrich python-vlc
 or
 
 pip install python-vlc
+
+-Making standalone file command (in conda):
+pyinstaller --onefile -w MediaPlayer_OrDaniel.py
+the stand alone file still need the VLC 64 bit to be installed
